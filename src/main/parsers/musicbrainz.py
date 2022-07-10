@@ -39,9 +39,8 @@ def musicbrainz_api(intel: dict):
 
             ret.setdefault("record_bid", r.json()['recordings'])
             for recording in r.json()['recordings']:
-                if hasattr(intels, 'length') and intels['length'] == recording['length']:
-
-
+                # if hasattr(intels, 'length') and intels['length'] == recording['length']:
+                pass
 
     #         result_mbid = parse.search("/release/{0}\"", soup) or parse.search("/release/{0}/\"", html)
     #         if result_mbid:
