@@ -20,16 +20,17 @@ async def async_get(url, query):
             raise IndexError
     except IndexError:
         raise AssertionError(f"url format not valid")
-    async with aiohttp.ClientSession().get(url + query) as response:  # Start a new session for current thread
-        if response.host != root:
-            raise f"{response.host} not {root}"
-        match response.content_type:
-            case 'application/json':
-                return await response.json()
-            case 'text/html':
-                return await response.read()
-            case _:
-                return await response.content.read()
+    async with aiohttp.ClientSession() as session:  # Start a new session for current thread
+        async with session.get(url + query) as response:  # Start a new session for current thread
+            if response.host != root:
+                raise f"{response.host} not {root}"
+            match response.content_type:
+                case 'application/json':
+                    return await response.json()
+                case 'text/html':
+                    return await response.read()
+                case _:
+                    return await response.content.read()
     return  # session or get failed. Unlikely... but may happen
 
 
