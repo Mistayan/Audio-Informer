@@ -1,69 +1,77 @@
 """
-Created by: 
-Project: 
+Created by: Mistayan
+Project: Audio-Informer
 Creation date: 07/10/22
 """
-import json
+import time
+
+import conf.api_conf
+from lib.myasync import AsyncRequest
+from lib.my import format_htm, save_json
 import logging
-import os.path
-import pprint
-
-from lib.async_testings import AsyncRequest
-import requests_html  # Special html parsing tool
-from lib.my import format_htm
-
-log = logging.getLogger(__name__)
 
 
 def musicbrainz_api(intel: dict):
+    start = time.time()
+    log = logging.getLogger(__name__)
+    log.setLevel(conf.api_conf.DEBUG)
+    log.debug(f"{__name__} @{time.time() - start} : start")
     intels = intel
     if not intels or not intels['Artist'] or not intels['Title']:
         log.warning("Could not request musicbrainz. Insuffisant datas")
         return
-    session = requests_html.HTMLSession()
-    absolute_link = f"https://musicbrainz.org/ws/2/recording?query=" \
-                    f"\"{format_htm(intels['Artist'])}\"+AND+" \
-                    f"\"{format_htm(intels['Title'])}\"&limit=5&fmt=json"
-    print(absolute_link)
-    with session.get(absolute_link) as r:
-        print(r.status_code)
-        ret = {}
-        if r and r.status_code == 200:  # On search page
-            target_dir = f"C:/Users/GAMER/Desktop/python-learnin/Audio-Informer/Results/json/{intels['Artist']}/"
-            if not os.path.isdir(target_dir):
-                os.mkdir(target_dir)
-            target_file = f"{intels['Title']}.json"
-            fp = open(target_dir + target_file, 'w')
-            pprint.pprint(r.json(), fp, compact=False)
-            fp.close()
 
-            ret.setdefault("record_bid", r.json()['recordings'])
-            for recording in r.json()['recordings']:
-                # if hasattr(intels, 'length') and intels['length'] == recording['length']:
-                pass
+    query = f"\"{format_htm(intels['Artist'])}\"+AND+" \
+            f"\"{format_htm(intels['Title'])}\"&limit=5" \
+            "&fmt=json"  # json <3
+    jj = AsyncRequest("https://musicbrainz.org/ws/2/recording?query=", query).get()
+    log.debug(f"{__name__} @{time.time() - start} : Async Done")
 
-    #         result_mbid = parse.search("/release/{0}\"", soup) or parse.search("/release/{0}/\"", html)
-    #         if result_mbid:
-    #             mbid = result_mbid[0]
+    # TODO: target_dir dynamic (after global integration)
+    target_dir = f"C:/Users/GAMER/Desktop/python-learnin/Audio-Informer/Results/{intels['Artist']}/"
+    file_name = f"{intels['Title']}.json"
+    save_json(jj, target_dir, file_name)
+    log.debug(f"{__name__} @{time.time() - start} : json saved")
+
+    ret = {}
+    try:
+        ret.setdefault("rbid", jj['recordings'][0]['id'])
+    except IndexError:
+        return
+    for recording in jj['recordings']:
+        print(recording)
+        if hasattr(intels, 'length') and intels['length'] == recording['length']:
+            # TODO: compare with current intels (if any)
+            pass
+        # TODO: gather more intel to categorize song
     return ret
     pass
 
 
 def test_1():
-    intel = {
-        "Artist": "ratatat",
-        "Title": "Loud pipe"
-    }
+    intel = {"Artist": "ratatat", "Title": "Loud pipe"}
     res = musicbrainz_api(intel)
-    assert "b57a9fe6-3087-41d7-baa7-3b0af00f1589" == res['mbid']
+    assert res['rbid'] == "69d8064a-1b6e-49af-933d-3e689b380af0"
 
 
 def test_2():
-    intel = {
-        "Artist": "Lady Gaga",
-        "Title": "Fire"
-    }
-    assert '235f3984-2c07-4b18-8b4c-ccffde43a0de' == musicbrainz_api(intel)
+    intel = {"Artist": "Lady Gaga", "Title": "Fire"}
+    assert musicbrainz_api(intel)['rbid'] == "235f3984-2c07-4b18-8b4c-ccffde43a0de"
+
+
+def test_multi():
+    intels = [{"Artist": "ratatat", "Title": "Lou pipe"},
+              {"Artist": "ratatat", "Title": "loud ppe"},
+              {"Artist": "rattat", "Title": "Loud pipe"},
+              {"Artist": "Neelix", "Title": "waterfall"},
+              {"Artist": "Jay Hardway", "Title": "Bootcamp"},
+              {"Artist": "Soundgarden", "Title": "Boot Camp"},
+              {"Artist": "Scorpio", "Title": "Still loving you"}]
+    results = []
+    for intel in intels:
+        results.append(musicbrainz_api(intel))
+    for result in results:
+        print(result)
 
 
 if __name__ == "__main__":
