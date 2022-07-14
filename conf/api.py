@@ -10,6 +10,7 @@ from logging import config
 # ____________________________________________________ #
 # _______________ LOGGER CONFIGURATIONS ______________ #
 # ____________________________________________________ #
+PROPAGATE = False
 VERBOSITY_COUNT_TO_LEVEL: Final = MappingProxyType({
     0: "ERROR",
     1: "WARNING",
@@ -34,14 +35,14 @@ log_config: Final = {
         'myapp': {
             'handlers': ['console'],
             'level': DEBUG,
-            'propagate': True if DEBUG == "DEBUG" else False
+            'propagate': True if DEBUG == "DEBUG" and PROPAGATE else False
         },
     },
     "formatters": {
         "std_out": {
-            "format": "%(levelname)s## %(asctime)s ## (Process Details: (%(process)d, %(processName)s), Thread Details:"
-                      " (%(thread)d, %(threadName)s))\n %(module)s.%(funcName)s : %(lineno)d : Log : %(message)s\n",
-            "datefmt": "%d-%m-%Y %H:%M:%S"
+            "format": "%(levelname)s## %(asctime)s ## [(%(process)d, %(processName)s),(%(thread)d, %(threadName)s)]\n"
+                      "===> %(module)s.%(funcName)s : %(lineno)d : Log : %(message)s",
+            "datefmt": "%d-%m %H:%M:%S"
         }
     },
 }

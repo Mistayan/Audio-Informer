@@ -3,17 +3,22 @@ Created by:
 Project: 
 Creation date: 07/10/22
 """
-import json
+import logging
 import os
 import re
+
+from conf import api
+
+logger = logging.getLogger(__name__)
+logger.setLevel(api.DEBUG)
 
 _String_to_Htm_ = {
     r'&': '%26',  # Htm_Type
     r' ': '+',  # Htm_Type
     r'\?': '%3F',  # Htm_Type
     r"¿": '%3F',  # PERSONAL Htm_Type
-    r'_+$': '',  # Ending spaces
-    r'^_+': '',  # Starting spaces
+    r'\++$': '',  # Ending spaces
+    r'^\++': '',  # Starting spaces
     r'[(\[]|[\])]': '',  # Brackets
     r"\#|\~|\t|\r|\n|\|": ''
 }
@@ -36,17 +41,21 @@ def clean_string(s: str, replacements: dict = None):
 def format_htm(raw_string: str):
     """
         Turns Raw_string to Html version for requests lookup
-        removes unseless spaces(before/after the content)
+        removes useless spaces(before/after the content)
         CRAP sub : ' ' -> '+', removes '(*)'|'[*]'
     """
+    if not type(raw_string) is str:
+        raise TypeError(f"{raw_string} should be a string")
     return clean_string(raw_string.capitalize())
 
 
-def rmkdir(path: str):
+def r_mkdir(path: str):
     """Requires an absolute path.
     recursively create folders to the asked path.
+    use with caution...
     """
     try:
+        re.sub(r"\\+", '/', path)  # ensure friendly / readable path
         root = path.split(":/")[0] + ":/"
         if not os.path.exists(root):
             raise ReferenceError("Requires an absolute path")
@@ -58,13 +67,9 @@ def rmkdir(path: str):
         raise NotADirectoryError(f"Invalid path : {path}")
 
 
-def save_json(jjson, path, file_name):
-    rmkdir(path)  # Ensure path asked is recursively checked
-    fp = open(path + file_name, 'w')
-    json.dump(jjson, fp, indent=4)
-    fp.close()
-
-
+# ____________________________________________________ #
+# _______________________ TESTS ______________________ #
+# ____________________________________________________ #
 def test():
     print(clean_string("Hello World!"))
     print(clean_string("azk,eîna $a)je,o)aê$*)ô j, o)aê"))

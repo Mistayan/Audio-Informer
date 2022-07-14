@@ -3,5 +3,5 @@ Created by: Mistayan
 Project: Audio-Informer
 """
 
-# from Contacts import Contacts
-from MediaHolder import MediaHolder
+# from . import Contacts
+from . import MediaHolder
