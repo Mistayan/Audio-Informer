@@ -8,7 +8,7 @@ import os
 import json
 import logging
 
-from lib.my import r_mkdir
+from lib.utils import r_mkdir
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ def save_json(_json, path, file_name):
         return
     r_mkdir(path)  # Ensure path asked is recursively checked
     absolute_path = path + file_name
-    # TODO: implement append limit
+    # TODO : implement append limit
     if os.path.exists(absolute_path):  # append to already existing files
         logger.info(f"{absolute_path} already exists. appending infos")
         _json = append_jsons(absolute_path, _json)

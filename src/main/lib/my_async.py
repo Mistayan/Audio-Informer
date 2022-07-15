@@ -67,7 +67,7 @@ class AsyncRequest:
 
     def get(self):
         """
-        Will freeze main process until result is available.
+        Will freeze calling process until result is available.
         when done, stop current loop after ensuring _Future
         Release newly created loop (if not main thread's loop)
         """
@@ -94,6 +94,7 @@ class AsyncRequest:
 # ____________________________________________________ #
 # _______________________ TESTS ______________________ #
 # ____________________________________________________ #
+
 def test_json(n: int = 100):
     import re
     import time
@@ -142,6 +143,8 @@ def test_mb_search():
 
 
 if __name__ == '__main__':
+    test_json()
+    test_mb_search()  # TODO : real tests, no prints
     req = AsyncRequest("https://www.bing.com/?q=", "top+10+hacks+reasons")
     print(req.get())
     pass

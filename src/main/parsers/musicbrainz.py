@@ -5,9 +5,10 @@ Creation date: 07/10/22
 """
 import time
 
-import conf.api_conf
-from lib.myasync import AsyncRequest
-from lib.my import format_htm, save_json
+import conf.api
+from lib.my_async import AsyncRequest
+from lib.utils import format_htm
+from lib.my_json import save_json
 import logging
 
 

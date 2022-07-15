@@ -11,20 +11,16 @@ import time
 from typing import Final
 
 import mutagen
-from mutagen import MutagenError
-from shazamio import Shazam, Serialize
-
-from conf import api_conf as conf
-from lib.my import format_htm
+from conf import api as conf
 
 # Test's confs
 # from parsers.musicbrainz import musicbrainz_api
 
-logger: Final = logging.getLogger("MediaHolder")
+logger: Final = logging.getLogger(__name__)
 logger.level = 3
 
 
-class MediaHolder(object):
+class MediaHolder:
     """
     Holds a valid file, with path, name, media details and its fingerprint
 
@@ -48,9 +44,10 @@ class MediaHolder(object):
 
     # ---------------------------------- Logic methods ---------------------------------- #
 
-    def valid(self) -> bool:
+    @staticmethod
+    def is_valid(path) -> bool:
         """returns True if file exists and has a valid file extension"""
-        return os.path.isfile(self.path) and str(self.path).upper().endswith(conf.VALID_EXTENSIONS)
+        return os.path.isfile(path) and str(path).upper().endswith(conf.VALID_EXTENSIONS)
 
     # ---------------------------------- Outer methods ---------------------------------- #
     def mutagen_load(self) -> mutagen.FileType | None:
@@ -69,20 +66,22 @@ class MediaHolder(object):
         loop = asyncio.new_event_loop()
         return loop.run_until_complete(shazam_it())
 
-    def update_id3(self, outfile):  # from https://programtalk.com/python-examples/mutagen.File/
+        return self.shazam
+
+    def update_id3(self):  # from https://programtalk.com/python-examples/mutagen.File/
         """Update ID3 tags in outfile"""
-        audio = mutagen.File(outfile, easy=True)
+        audio = mutagen.File(self.path, easy=True)
         audio.add_tags()
-        audio["title"] = self.intel["Title"]
-        audio["album"] = self.intel["Album"]
-        audio["artist"] = self.intel["Artist"]
-        audio["performer"] = self.intel["AlbumArtist"]
-        audio["composer"] = self.intel["Composer"]
-        audio["genre"] = self.intel["Genre"]
-        audio["date"] = str(self.intel["Year"])
-        audio["tracknumber"] = str(self.intel["TrackNumber"])
-        audio["discnumber"] = str(self.intel["DiscNumber"])
-        audio["compilation"] = str(self.intel["Compilation"])
+        audio["title"] = self.intel["title"]
+        audio["album"] = self.intel["album"]
+        audio["artist"] = self.intel["artist"]
+        audio["performer"] = self.intel["albumArtist"]
+        audio["composer"] = self.intel["composer"]
+        audio["genre"] = self.intel["genre"]
+        audio["date"] = str(self.intel["year"])
+        audio["tracknumber"] = str(self.intel["trackNumber"])
+        audio["discnumber"] = str(self.intel["discNumber"])
+        audio["compilation"] = str(self.intel["compilation"])
         audio.save()
 
     # ---------------------------------- Magic functions ---------------------------------- #
