@@ -12,10 +12,11 @@ from logging import config
 # ____________________________________________________ #
 PROPAGATE = False
 VERBOSITY_COUNT_TO_LEVEL: Final = MappingProxyType({
-    0: "ERROR",
-    1: "WARNING",
-    2: "INFO",
-    3: "DEBUG",
+    0: "CRITICAL",
+    1: "ERROR",
+    2: "WARNING",
+    3: "INFO",
+    4: "DEBUG",
 })
 DEBUG: Final = VERBOSITY_COUNT_TO_LEVEL[2]  # Prod config
 log_config: Final = {
@@ -40,8 +41,9 @@ log_config: Final = {
     },
     "formatters": {
         "std_out": {
-            "format": "%(levelname)s## %(asctime)s ## [(%(process)d, %(processName)s),(%(thread)d, %(threadName)s)]\n"
-                      "===> %(module)s.%(funcName)s : %(lineno)d : Log : %(message)s",
+            "format": "%(levelname)s## %(asctime)s ##  %(module)s.%(funcName)s@%(lineno)d "
+                      "[(%(process)d, %(processName)s),(%(thread)d, %(threadName)s)]\t"
+                      "==> :  %(message)s",
             "datefmt": "%d-%m %H:%M:%S"
         }
     },
