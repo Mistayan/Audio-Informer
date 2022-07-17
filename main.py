@@ -34,7 +34,7 @@ current_dir_files.setdefault(file, job) if job.__repr__() else None
 """
 
 
-def list_files_in_dir(current_dir: str) -> list:
+def load_files(current_dir: str) -> list:
     """
     :param current_dir: directory to scan for valid audio files
     :return list:
@@ -45,9 +45,9 @@ def list_files_in_dir(current_dir: str) -> list:
             abs_file_path = os.path.join(root, file)
             # First filter
             # File exists and has valid extension
-            if os.path.isfile(abs_file_path) and MediaHolder.is_valid(abs_file_path):
-                job = MediaHolder(abs_file_path)
-                ret.append(job) if job.intel or job.shazam else None
+            if MediaHolder.is_valid(abs_file_path):
+                print(abs_file_path)
+                ret.append(MediaHolder(abs_file_path))
 
     return ret
 
@@ -70,9 +70,9 @@ def parse_main_args(args: list) -> list:
             logger.warning(f"{abs_path}  : does not exists")
             return ret
         elif os.path.isdir(abs_path):  # if path is a folder
-            ret = list_files_in_dir(abs_path)
-        elif os.path.isfile(path) and str(path).upper().endswith(conf.VALID_EXTENSIONS):
-            ret.append(MediaHolder(abs_path)) if MediaHolder.is_valid(abs_path) else None
+            ret = load_files(abs_path)
+        elif MediaHolder.is_valid(abs_path):
+            ret.append(MediaHolder(abs_path))
     return ret
 
 
