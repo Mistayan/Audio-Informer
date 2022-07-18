@@ -30,7 +30,6 @@ import multiprocessing
     ))
 for job in jobs :
 job.wait()
-current_dir_files.setdefault(file, job) if job.__repr__() else None
 """
 
 
@@ -43,7 +42,6 @@ def load_files(current_dir: str) -> list:
     for root, dirs, files in os.walk(current_dir):
         for file in files:
             abs_file_path = os.path.join(root, file)
-            # First filter
             # File exists and has valid extension
             if MediaHolder.is_valid(abs_file_path):
                 print(abs_file_path)
@@ -78,12 +76,16 @@ def parse_main_args(args: list) -> list:
 
 if __name__ == '__main__':
     # list compatible files in folder
-    # else append single file to list (if compatible)
+    # else append single file to MediaHolder_list (if compatible)
     s = time.perf_counter()
-    medias = parse_main_args(sys.argv)
-    elapsed = time.perf_counter() - s
-    print(f"intels gathered in {elapsed:0.2f} seconds.")
-    pprint.pprint(medias)
-    # TODO : next step, is to gather intel on the web, compare those and ask user to validate intel
-    elapsed = time.perf_counter() - s
-    print(f"{__file__} executed in {elapsed:0.2f} seconds.")
+    if len(sys.argv) >= 2 and re.match(r"", sys.argv[0].split("\\")[-1]):  # python main args
+        medias = parse_main_args(sys.argv)
+    else:
+        print("no path/media chosen. Executing on src/tests/test_dir")
+        medias = parse_main_args([__name__, "src/tests/test_dir"])
+    print(f"files found , loaded, and researches have started in {time.perf_counter() - s:0.5f} seconds.")
+    # media: MediaHolder
+    for media in medias:
+        print(media.__repr__())
+    # TODO: next step, compare found intel and ask user to validate.
+    print(f"{__file__} executed in {time.perf_counter() - s:0.3f} seconds. ({len(medias)} files processed)")
