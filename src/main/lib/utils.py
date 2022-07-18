@@ -1,6 +1,6 @@
 """
-Created by: 
-Project: 
+Created by: Mistayan
+Project: Learning-Python
 Creation date: 07/10/22
 """
 import logging
@@ -49,8 +49,19 @@ def format_htm(raw_string: str):
     return clean_string(raw_string.capitalize())
 
 
+def get_file_name(path):
+    if not path:
+        return path
+    try:
+        re.sub(r"\\+", '/', path)
+        return path.split('/')[-1]
+    except IndexError:
+        raise FileNotFoundError(path)
+
+
 def r_mkdir(path: str):
-    """Requires an absolute path.
+    """
+    Requires an absolute path.
     recursively create folders to the asked path.
     use with caution...
     """
