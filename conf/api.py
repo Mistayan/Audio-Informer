@@ -5,8 +5,12 @@ Project: Audio-Informer
 
 from types import MappingProxyType
 from typing import Final
-from logging import config
+import pydub
+import os
 
+if not os.path.exists("ffmpeg.exe"):
+    exit(print("please install ffmpeg + ffprobe, or copy .exe files in /conf"))
+pydub.AudioSegment.converter = "ffmpeg.exe"
 # ____________________________________________________ #
 # _______________ LOGGER CONFIGURATIONS ______________ #
 # ____________________________________________________ #
