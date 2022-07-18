@@ -1,4 +1,7 @@
 .idea
 Results
 experimentations
-tests/test_dir
+src/tests/test_dir
+*.pytest*
+*.exe
+!*.py
