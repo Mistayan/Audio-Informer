@@ -9,7 +9,7 @@ import pydub
 import os
 
 if not os.path.exists("ffmpeg.exe"):
-    exit(print("please install ffmpeg + ffprobe, or copy .exe files in /conf"))
+    exit(print("please copy ffmpeg near main.py"))
 pydub.AudioSegment.converter = "ffmpeg.exe"
 # ____________________________________________________ #
 # _______________ LOGGER CONFIGURATIONS ______________ #
