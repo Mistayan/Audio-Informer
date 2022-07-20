@@ -3,6 +3,7 @@ Created by: Mistayan
 Project: Audio-Informer
 """
 import logging
+import multiprocessing
 import os
 import re
 import time
@@ -13,7 +14,8 @@ from conf import api as conf
 from lib.my_async import AsyncRequest
 from lib.utils import get_file_name
 from parsers.musicbrainz import musicbrainz_api
-from parsers.shazam import shazam_it, get_shazam_lyrics
+from parsers.shazam import shazam_it, get_lyrics
+from multiprocessing import Queue
 logger = logging.getLogger(__name__)
 
 
@@ -21,9 +23,18 @@ class MediaHolder:
     """
     Holds a valid file, with path, name, media details and its fingerprint
 
+
+    How to use:
+    if MediaHolder.is_valid(file):
+        media = MediaHolder(file)
+        print(media.get_lyrics())
+        print(media.get_shazam())
+        print(media.get_mutagen())
+        print(media.get_musicbrainz())
+        print(media.__repr__())  # will user all search methods at once and display gathered intel
     """
 
-    def __init__(self, path: str, callback=None, **kwargs):
+    def __init__(self, path: str, **kwargs):
         if not self.is_valid(path):
             logger.error(f"{path} => not a valid file")
             return
@@ -33,15 +44,20 @@ class MediaHolder:
         except IndexError:
             logger.error(f"{self.path} => not a valid path")
             return
+        cp = multiprocessing.current_process()
+        pp = multiprocessing.parent_process()
+        if pp and not cp.is_alive():  # Multiprocessing support Start
+            logger.debug(f"{cp.pid} Run")
+            cp.run()
         self.intel = None
         self.future = None
         self.shazam = None
         self.musicbrainz = None
         self.additional = None
         self.lyrics = None
+        self.repr = None
 
         self.shazam = AsyncRequest(shazam_it, self.path)
-        self.shazam.add_done_callback(callback)
         self.get_mutagen()
         # TODO: ensure MPEG 'TABL', 'TIT2', 'TPE1', TCON to be loaded as classic intel
         # TODO: ensure FLAC 'TITLE', 'ALBUMARTIST' > 'ARTIST', 'DATE', 'ALBUM', 'GENRE', 'TRACKNUMUBER', 'TOTALTRACKS'
@@ -50,6 +66,14 @@ class MediaHolder:
             logger.warning(f"failed to open : {self.name} ")
             return
         logger.info(f"Storing {self.name} as Media")
+        if 'multithread' in kwargs and kwargs.get('multithread') is True:   # Multithread support
+            if 'queue' in kwargs:
+                kwargs['queue'].put(self.__repr__())  # calculate everything and send back to shared memory.
+            else:
+                self.__repr__()
+        if pp and cp.is_alive():  # Multiprocessing support Stop
+            cp.close()
+            exit(0)
 
     # ---------------------------------- Logic methods ---------------------------------- #
     @staticmethod
@@ -78,13 +102,13 @@ class MediaHolder:
 
     def get_musicbrainz(self):
         if not self.musicbrainz:
-            self.musicbrainz = musicbrainz_api(self.get_shazam() or self.get_mutagen())
+            self.musicbrainz = AsyncRequest(musicbrainz_api, self.get_shazam() or self.get_mutagen()).get()
         return self.musicbrainz
 
-    def get_lyrics(self):
-        if not self.lyrics:
-            self.lyrics = get_shazam_lyrics(self.get_shazam()['lyrics_url']) if self.shazam else None
-        return  self.lyrics
+    # def get_lyrics(self):  # now included in shazam
+    #     if not self.lyrics:
+    #         self.lyrics = get_lyrics(self.get_shazam()['lyrics_url']) if self.shazam else None
+    #     return self.lyrics
 
     def update_id3(self):  # from https://programtalk.com/python-examples/mutagen.File/
         """Update ID3 tags in outfile"""
@@ -105,19 +129,22 @@ class MediaHolder:
 
     # ---------------------------------- Magic functions ---------------------------------- #
     def __str__(self):
-        return self.name
+        return str(self.__repr__())
 
     def __repr__(self):
-        return {
-            "name": self.name,
-            "mutagen": self.intel,
-            "shazam": self.get_shazam(),
-            "lyrics": self.get_lyrics(),
-            "musicbrainz":  self.get_musicbrainz(),
-            # TODO: Implement more researches for :
-            # better genders analysis
-            #
-        }
+        if not self.repr:
+            self.shazam.__await__()
+            self.repr = {
+                "name": self.name,
+                "mutagen": self.intel,
+                "shazam": self.get_shazam(),
+                # "lyrics": self.get_lyrics(),
+                "musicbrainz":  self.get_musicbrainz(),
+                # TODO: Implement more researches for :
+                # better genders analysis
+                #
+            }
+        return self.repr
 
 
 # ---------------------------------- Test Class ---------------------------------- #
@@ -136,7 +163,9 @@ def test_class(file="../../tests/test_dir/music_without_tags.mp3"):
 def test_rubbish():
     media = MediaHolder("../../tests/test_dir/dumb_folder/15.mp4").__repr__()
     for field in media:
-        assert media[field] is None
+        if field != 'name':
+            assert media[field] is None
+
 
 if __name__ == "__main__":
     pass
