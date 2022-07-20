@@ -18,9 +18,8 @@ def get_intel(intel):
         else None
 
 
-def musicbrainz_api(intel: dict, save=False) -> dict | None:
+async def musicbrainz_api(intel: dict, save=False) -> dict | None:
     """uses intel['artist' | 'title' | 'album']"""
-    start = time.time()
     log = logging.getLogger(__name__)
     if not intel or not isinstance(intel, dict) or intel == {}:
         log.info(f"Could not request musicbrainz. No datas")
@@ -30,8 +29,8 @@ def musicbrainz_api(intel: dict, save=False) -> dict | None:
     query += f"+AND+\"{format_htm(get_intel(intel['title']))}\"" if 'title' in intel else ''
     query += f"+AND+{format_htm(get_intel(intel['album']))}" if 'album' in intel else ''
     query += "&limit=5&fmt=json"  # json <3
-    log.debug(f"@{time.time() - start} : {query}")
-    _json = AsyncRequest(get_content, "https://musicbrainz.org/ws/2/recording?query=", query).get()
+    log.debug(query)
+    _json = await get_content("https://musicbrainz.org/ws/2/recording?query=", query)
 
     if save:
         artist = get_intel(intel['artist']) if 'artist' in intel else ''
@@ -40,12 +39,12 @@ def musicbrainz_api(intel: dict, save=False) -> dict | None:
         target_dir = f"./json/{artist}/"
         file_name = f"{title}.json"
         save_json(_json, target_dir, file_name) if conf.api.DEBUG else None
-        log.debug(f"{__name__} @{time.time() - start} : json saved")
+        log.debug(f"{artist}/{title} :  saved")
 
     ret = {}
     try:
         ret.setdefault("rbid", _json['recordings'][0]['id'])  # lazy_mode = True
-    except IndexError or KeyError:  # No recordings associated with the search
+    except TypeError or IndexError or KeyError:  # No recordings associated with the search
         return None
     for recording in _json['recordings']:
         log.debug(recording)
