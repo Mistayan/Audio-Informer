@@ -46,13 +46,13 @@ async def shazam_it(file) -> dict | None:
             "similar_songs_url": sections[3]['url'] if len(sections) >= 4 and 'url' in sections[3] else '',
             "thumb_url": track['images']['coverart'] if 'images' in track and 'coverart' in track['images'] else '',
             "lyrics_url": sections[1]['url'] if len(sections) >= 2 and 'url' in sections[1] else '',
-            "lyrics": get_shazam_lyrics(sections[1]['url']) if len(sections) >= 2 and 'url' in sections[1] else '',
+            "lyrics": get_lyrics(sections[1]['url']) if len(sections) >= 2 and 'url' in sections[1] else '',
             }
     # thu = AsyncRequest(intel['thumb_url'])
     # save_thumbnail(f"{intel['album']}", thu.get())
 
 
-def get_shazam_lyrics(url: str, no_offset=True) -> dict | None:
+def get_lyrics(url: str, no_offset=True) -> dict | None:
     """
     get lyrics from shazam url
     returns a dict: { 'text': ['offset': timestamp, text] | [ text ] }
