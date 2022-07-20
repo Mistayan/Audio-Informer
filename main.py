@@ -19,20 +19,6 @@ def print_help(msg: str = None) -> None:
     exit(-1)
 
 
-"""
-import multiprocessing
-    # When everything works fine, go multiprocessing
-    jobs = []
-    jobs.append(multiprocessing.Process(
-        target=MediaHolder,
-        kwargs={'path': abs_path},
-        name=abs_path
-    ))
-for job in jobs :
-job.wait()
-"""
-
-
 def load_files(current_dir: str) -> list:
     """
     :param current_dir: directory to scan for valid audio files
