@@ -24,11 +24,12 @@ async def get_content(url: str, query: str = ''):
     Generate an async session requesting url + query
     Returns a StreamReader, according to current response formatting
     """
-
-    target = yarl.URL(url + query)
+    if not url:
+        return
+    target = yarl.URL(url + query)  # proper request formatting
     log.info(f"request : {target}")
     async with aiohttp.ClientSession() as session:  # Start a new session for current thread
-        async with session.get(target) as response:  # Start a new session for current thread
+        async with session.get(target) as response:  # Get session's content
             if response.host != target.host:
                 raise f"{response.host} not {target.host}"
             if not response.status == 200:
@@ -41,7 +42,7 @@ async def get_content(url: str, query: str = ''):
                         ret = await response.read()
                     case _:
                         ret = await response.content.read()
-    log.debug(f"result for {target.human_repr()}: {ret}")
+    log.debug(f"result for {target.human_repr()}: {ret if not isinstance(ret, bytes) and len(ret) < 500 else 'bytes.'}")
     return ret
 
 
@@ -60,7 +61,8 @@ class AsyncRequest:
 
     How To Use:
     request = AsyncRequest(async_function, arg1, arg2, ..., {datas required for async_function to run})
-    request2 = AsyncRequest(get_content, address, callback=print)  # print(request2.get()) as soon as possible
+    request2 = AsyncRequest(get_content, address, callback=print)
+    print(request2.get())  # as soon as possible
     # do stuff (like requesting more stuff ?)
     results = request.get()
     # do more stuff with the results
