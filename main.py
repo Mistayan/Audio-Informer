@@ -43,7 +43,7 @@ def parse_main_args(args: list) -> list:
      File: [valid_file]
      Path: [[valid_files_in_dir]]
     """
-    if len(args) <= 1:
+    if len(args) <= 0:
         print_help()
 
     path = os.getcwd()  # Current_workdir
@@ -65,10 +65,10 @@ if __name__ == '__main__':
     # else append single file to MediaHolder_list (if compatible)
     s = time.perf_counter()
     if len(sys.argv) >= 2 and re.match(r"", sys.argv[0].split("\\")[-1]):  # python main args
-        medias = parse_main_args(sys.argv)
+        medias = parse_main_args(sys.argv[1:])
     else:
         print("no path/media chosen. Executing on src/tests/test_dir")
-        medias = parse_main_args([__name__, "src/tests/test_dir"])
+        medias = parse_main_args(["src/tests/test_dir/"])
     print(f"files found , loaded, and researches have started in {time.perf_counter() - s:0.5f} seconds.")
     # media: MediaHolder
     for media in medias:
