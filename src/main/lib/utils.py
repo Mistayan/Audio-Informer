@@ -3,50 +3,17 @@ Created by: Mistayan
 Project: Learning-Python
 Creation date: 07/10/22
 """
+import json
 import logging
 import os
 import re
 
 from conf import api
+from lib.my_async import get_content
 
 logger = logging.getLogger(__name__)
 logger.setLevel(api.DEBUG)
-
-_String_to_Htm_ = {
-    r'&': '%26',  # Htm_Type
-    r' ': '+',  # Htm_Type
-    r'\?': '%3F',  # Htm_Type
-    r"¿": '%3F',  # PERSONAL Htm_Type
-    r'\++$': '',  # Ending spaces
-    r'^\++': '',  # Starting spaces
-    r'[(\[]|[\])]': '',  # Brackets
-    r"\#|\~|\t|\r|\n|\|": ''
-}
-
-
-def clean_string(s: str, replacements: dict = None):
-    """
-    Input: String, {pattern:replace}
-    Output: String - pattern + replace
-    """
-    if replacements is None:
-        replacements = _String_to_Htm_
-    if type(s) is not str:
-        s = str(s)
-    for pattern in replacements:
-        s = re.sub(pattern, replacements[pattern], s)
-    return s
-
-
-def format_htm(raw_string: str):
-    """
-        Turns Raw_string to Html version for requests lookup
-        removes useless spaces(before/after the content)
-        CRAP sub : ' ' -> '+', removes '(*)'|'[*]'
-    """
-    if not type(raw_string) is str:
-        raise TypeError(f"{raw_string} should be a string")
-    return clean_string(raw_string.capitalize())
+# Clean_string & format_htm replaced by YARL
 
 
 def get_file_name(path):
@@ -66,16 +33,67 @@ def r_mkdir(path: str):
     use with caution...
     """
     try:
-        re.sub(r"\\+", '/', path)  # ensure friendly / readable path
+        if path[0] == '.' and path[1] == '/':
+            path = path.replace('.', os.getcwd())
+        path = re.sub(r"\\+", '/', path).replace(' ', '_')  # ensure friendly / readable path
         root = path.split(":/")[0] + ":/"
         if not os.path.exists(root):
-            raise ReferenceError("Requires an absolute path")
+            raise ReferenceError(f"Requires an absolute (or current './') path: {root}")
         for sub in path.split("/")[1:]:
-            root += sub + '/'
+            root += re.sub(r"[:|^?&#;,%]|_+", "_", sub + '/')
             if not os.path.isdir(sub) and not os.path.exists(root):
+                logger.debug(f"making dir : {sub}")
                 os.mkdir(root)
-    except IndexError | ReferenceError:
-        raise NotADirectoryError(f"Invalid path : {path}")
+    except (IndexError, ReferenceError, TypeError):
+        raise
+
+
+def read_json(file: str) -> list | None:
+    with open(file, 'r') as fp:
+        try:
+            file_json: dict = json.load(fp)
+            if isinstance(file_json, list):
+                return file_json
+            return [file_json]
+        except json.JSONDecodeError as err:
+            logger.warning(f"could not decode previously saved json : {err}")
+            return None
+
+
+def save_json(group: str, album: str, file_name: str, _json) -> None:
+    if not (group or album or file_name or _json):
+        return
+    dir = f"./Results/{group}/{album}/".replace(' ', '_')
+    abs_path = re.sub(r"[:|^?&#;,%]|_+", "_", dir + f"{file_name}.json")
+    r_mkdir(dir)  # Ensure path asked is recursively checked
+    # TODO: implement append limit
+    uac = f"Saving {abs_path}. "
+    if os.path.exists(abs_path):  # append to already existing files
+        uac += "Already exists. "
+        file_list = read_json(abs_path)
+        to_save = [_json]
+        if file_list:
+            for _dict in file_list:
+                to_save.append(_dict) if _dict not in to_save else None
+        if len(to_save) == 1:  # Cancel
+            to_save = to_save[0]
+    else:
+        uac += "Creating json dump"
+        to_save = _json
+    with open(abs_path, 'w') as fp:
+        json.dump(to_save, fp, indent=4)
+    logger.info(uac)
+
+
+async def save_thumbnail(group: str, album: str, url) -> None:
+    target = f"./Results/{group}/{album}/".replace(' ', '_')
+    abs_path = re.sub(r"[:|^?&#;,%]|_+", "_", target + "thumbnail.png")
+    r_mkdir(target)
+    if os.path.exists(abs_path):
+        return
+    with open(abs_path, "w+b") as fp:
+        fp.write(await get_content(url))
+    return
 
 
 # ____________________________________________________ #
