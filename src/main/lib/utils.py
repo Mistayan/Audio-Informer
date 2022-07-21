@@ -28,7 +28,7 @@ def get_file_name(path):
 
 def r_mkdir(path: str):
     """
-    Requires an absolute path.
+    Requires an absolute path, or curent path './'
     recursively create folders to the asked path.
     use with caution...
     """
@@ -99,12 +99,5 @@ async def save_thumbnail(group: str, album: str, url) -> None:
 # ____________________________________________________ #
 # _______________________ TESTS ______________________ #
 # ____________________________________________________ #
-def test():
-    print(clean_string("Hello World!"))
-    print(clean_string("azk,eîna $a)je,o)aê$*)ô j, o)aê"))
-
-
 if __name__ == "__main__":
-    test()
-
     pass
