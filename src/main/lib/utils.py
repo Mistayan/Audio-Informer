@@ -60,11 +60,13 @@ def read_json(file: str) -> list | None:
             return None
 
 
-def save_json(group: str, album: str, file_name: str, _json) -> None:
-    if not (group or album or file_name or _json):
+def save_json(_json: dict, file_name: str, group: str = None, album: str = None) -> None:
+    if not (file_name or _json):
         return
-    dir = f"./Results/{group}/{album}/".replace(' ', '_')
-    abs_path = re.sub(r"[:|^?&#;,%]|_+", "_", dir + f"{file_name}.json")
+    group = group if group else 'Unknown'
+    album = album if album else 'Unknown'
+    dir = f"./Results/{group}/{album}/"
+    abs_path = re.sub(r"[:|^?&#;,% ]|_+", "_", dir + f"{file_name}.json")
     r_mkdir(dir)  # Ensure path asked is recursively checked
     # TODO: implement append limit
     uac = f"Saving {abs_path}. "

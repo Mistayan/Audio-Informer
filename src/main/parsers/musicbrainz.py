@@ -4,55 +4,53 @@ Project: Audio-Informer
 Creation date: 07/10/22
 """
 import logging
-import time
-
-import conf.api
-from lib.my_async import AsyncRequest, get_content
-from lib.my_json import save_json
-from lib.utils import format_htm
+from lib.my_async import get_content, AsyncRequest
+from lib.utils import save_json
 
 
 def get_intel(intel):
+    # shazam:  only one value per field {'label': 'name'}
+    # mutagen:  may have multiple values {'label': ['name'(, ...)]}
     return intel if isinstance(intel, str) \
         else intel[0] if isinstance(intel, list) and len(intel) == 1 \
         else None
 
 
-async def musicbrainz_api(intel: dict, save=False) -> dict | None:
+def musicbrainz_api(intel: dict, save=True) -> dict | None:
     """uses intel['artist' | 'title' | 'album']"""
     log = logging.getLogger(__name__)
     if not intel or not isinstance(intel, dict) or intel == {}:
         log.info(f"Could not request musicbrainz. No datas")
         return
     # mutagen/user_input integration
-    query = f"\"{format_htm(get_intel(intel['artist']))}\"" if 'artist' in intel else ''
-    query += f"+AND+\"{format_htm(get_intel(intel['title']))}\"" if 'title' in intel else ''
-    query += f"+AND+{format_htm(get_intel(intel['album']))}" if 'album' in intel else ''
-    query += "&limit=5&fmt=json"  # json <3
-    log.debug(query)
-    _json = await get_content("https://musicbrainz.org/ws/2/recording?query=", query)
+    site = "https://musicbrainz.org/ws/2/recording?query="
+    artist = get_intel(intel['artist']) if 'artist' in intel else None
+    title = get_intel(intel['title']) if 'title' in intel else None
+    album = get_intel(intel['album']) if 'album' in intel else None
+    query = f"\"{artist}\""
+    search_factors = "&limit=1&fmt=json"
+    request = AsyncRequest(get_content, site, query + f"+AND+\"{title}\"{search_factors}")
+    request2 = AsyncRequest(get_content, site, query + f"+AND+\"{album}\"{search_factors}")
+    _json = request.get().get('recordings') if request.get() else None
+    compare_json = request2.get().get('recordings') if request2.get() else None
 
     if save:
-        artist = get_intel(intel['artist']) if 'artist' in intel else ''
-        title = get_intel(intel['title']) if 'title' in intel else ''
-        # TODO: make target_dir dynamic (after global integration)
-        target_dir = f"./json/{artist}/"
-        file_name = f"{title}.json"
-        save_json(_json, target_dir, file_name) if conf.api.DEBUG else None
-        log.debug(f"{artist}/{title} :  saved")
+        save_json(_json, title + ".mb", artist, album) if _json else None
+        save_json(compare_json, title + ".mb_compare", artist, album) if compare_json else None
+        log.info(f"{artist}/{title} :  saved")
 
     ret = {}
     try:
         ret.setdefault("rbid", _json['recordings'][0]['id'])  # lazy_mode = True
-    except TypeError or IndexError or KeyError:  # No recordings associated with the search
+    except (IndexError, KeyError, TypeError):  # No recordings associated with the search
         return None
     for recording in _json['recordings']:
         log.debug(recording)
         if hasattr(intel, 'length') and intel['length'] == recording['length']:
-            # TODO: compare with current intels (if any)
+            # TODO: compare with current intel (if any)
             pass
         # TODO: gather more intel to categorize song for more accurate recognitions
-    return ret
+    return ret if ret != {} else None
     pass
 
 

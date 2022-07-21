@@ -12,10 +12,9 @@ import mutagen
 
 from conf import api as conf
 from lib.my_async import AsyncRequest
-from lib.utils import get_file_name
+from lib.utils import get_file_name, save_json
 from parsers.musicbrainz import musicbrainz_api
-from parsers.shazam import shazam_it, get_lyrics
-from multiprocessing import Queue
+from parsers.shazam import shazam_it
 logger = logging.getLogger(__name__)
 
 
@@ -49,21 +48,17 @@ class MediaHolder:
         if pp and not cp.is_alive():  # Multiprocessing support Start
             logger.debug(f"{cp.pid} Run")
             cp.run()
-        self.intel = None
-        self.future = None
-        self.shazam = None
         self.musicbrainz = None
-        self.additional = None
-        self.lyrics = None
         self.repr = None
-
         self.shazam = AsyncRequest(shazam_it, self.path)
+        self.intel = None
         self.get_mutagen()
         # TODO: ensure MPEG 'TABL', 'TIT2', 'TPE1', TCON to be loaded as classic intel
         # TODO: ensure FLAC 'TITLE', 'ALBUMARTIST' > 'ARTIST', 'DATE', 'ALBUM', 'GENRE', 'TRACKNUMUBER', 'TOTALTRACKS'
 
         if not (self.intel or self.shazam):
             logger.warning(f"failed to open : {self.name} ")
+            del self
             return
         logger.info(f"Storing {self.name} as Media")
         if 'multithread' in kwargs and kwargs.get('multithread') is True:   # Multithread support
@@ -101,8 +96,8 @@ class MediaHolder:
         return self.shazam
 
     def get_musicbrainz(self):
-        if not self.musicbrainz:
-            self.musicbrainz = AsyncRequest(musicbrainz_api, self.get_shazam() or self.get_mutagen()).get()
+        if not self.musicbrainz and self.get_shazam() or self.get_mutagen():
+            self.musicbrainz = musicbrainz_api(self.get_shazam() or self.get_mutagen())
         return self.musicbrainz
 
     # def get_lyrics(self):  # now included in shazam
@@ -131,14 +126,13 @@ class MediaHolder:
     def __str__(self):
         return str(self.__repr__())
 
-    def __repr__(self):
+    def __repr__(self) -> dict:
         if not self.repr:
             self.shazam.__await__()
             self.repr = {
                 "name": self.name,
                 "mutagen": self.intel,
-                "shazam": self.get_shazam(),
-                # "lyrics": self.get_lyrics(),
+                "shazam": self.get_shazam(),  # includes lyrics: { text,  writers } found on shazam
                 "musicbrainz":  self.get_musicbrainz(),
                 # TODO: Implement more researches for :
                 # better genders analysis

@@ -3,18 +3,20 @@ Created by: Mistayan
 Project: Learning-Python
 Creation date: 07/15/22
 """
+import os.path
+
 import parse
 import logging
 
 import pydub.exceptions
 from shazamio import Shazam
 from lib.my_async import AsyncRequest, get_content
-from lib.utils import save_thumbnail, get_file_name
+from lib.utils import save_thumbnail, get_file_name, save_json
 
 log = logging.getLogger(__name__)
 
 
-async def shazam_it(file) -> dict | None:
+async def shazam_it(file, save=True) -> dict | None:
     """
     async shazam the file provided
     gather any useful intel and sends back a dict
@@ -35,31 +37,33 @@ async def shazam_it(file) -> dict | None:
     log.debug(f"shazam succeeded on : {name}")
     sections = track['sections']
     meta = sections[0]['metadata']
-    # TODO: Test with different songs, to avoid errors (so far so good, but need more testings)
-    return {"title": track['title'],
-            "artist": track['subtitle'],
-            "genres": track['genres'],
-            "album": meta[0]['text'],
-            "release_date": meta[2]['text'],
-            "record_label": meta[1]['text'],
-            "youtube_redirect": sections[2]['youtubeurl'] if len(sections) >= 3 and 'youtubeurl' in sections[2] else '',
-            "similar_songs_url": sections[3]['url'] if len(sections) >= 4 and 'url' in sections[3] else '',
-            "thumb_url": track['images']['coverart'] if 'images' in track and 'coverart' in track['images'] else '',
-            "lyrics_url": sections[1]['url'] if len(sections) >= 2 and 'url' in sections[1] else '',
-            "lyrics": get_lyrics(sections[1]['url']) if len(sections) >= 2 and 'url' in sections[1] else '',
-            }
-    # thu = AsyncRequest(intel['thumb_url'])
-    # save_thumbnail(f"{intel['album']}", thu.get())
+    thumb_url = track['images']['coverart'] if 'images' in track and 'coverart' in track['images'] else None
+
+    intel = {"title": track.get('title'),
+             "artist": track.get('subtitle'),
+             "genres": track.get('genres'),
+             "album": meta[0].get('text'),
+             "release_date": meta[2].get('text'),
+             "record_label": meta[1].get('text'),
+             "youtube_redirect": sections[2].get('youtubeurl') if len(sections) >= 3 else None,
+             "similar_songs_url": sections[3].get('url') if len(sections) >= 4 else None,
+             "lyrics_url": sections[1].get('url') if len(sections) >= 2 else None,
+             "lyrics": await get_lyrics(sections[1].get('url')) if len(sections) >= 2 else None,
+             }
+    if save:
+        await save_thumbnail(intel['artist'], intel['album'], thumb_url)
+        save_json(intel, intel['title'] + ".szm", intel['artist'], intel['album'])
+    return intel
 
 
-def get_lyrics(url: str, no_offset=True) -> dict | None:
+async def get_lyrics(url: str, no_offset=True) -> dict | None:
     """
     get lyrics from shazam url
     returns a dict: { 'text': ['offset': timestamp, text] | [ text ] }
     """
     if not url or not isinstance(url, str):
         return
-    lyrics_infos = AsyncRequest(get_content, url).get()  # expect json
+    lyrics_infos = await get_content(url)  # expect json
 
     if not lyrics_infos:
         return
@@ -86,4 +90,3 @@ if __name__ == "__main__":
     result = AsyncRequest(shazam_it, file_path).get()
     pprint.pprint(result)
     # pprint.pprint(get_lyrics(result['lyrics_url']), compact=False, indent=2)
-

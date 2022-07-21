@@ -5,8 +5,6 @@ Project: Learning-Python
 import time
 import asyncio
 import logging
-from multiprocessing import process
-from uuid import UUID
 
 import aiohttp
 import yarl
@@ -72,25 +70,20 @@ class AsyncRequest:
 
     def __init__(self, func, *args, **kwargs):
         self.log = logging.getLogger(__name__ + str(func))
-
-        # sanity checks
         self.start = time.perf_counter()
+        self.name = [*args]
+        self.__loop = None
+        self.future = None
+        # sanity checks
         try:
             self.__loop = asyncio.get_event_loop()
-            self.__purge_when_done = False
-        except RuntimeError:
-            self.log.debug("creating new loop")
-            self.__loop = asyncio.new_event_loop()
-            self.__purge_when_done = True
-        self.result = None
-        asyncio.set_event_loop(self.__loop)
-
-        # Start
-        self.future = asyncio.gather(func(*args, **kwargs))  # initiate request in background's loop
-        if self.future:
+            self.future = asyncio.Task(func(*args))  # initiate request as background task
             self.future.add_done_callback(self._set_result)
-        else:
-            raise asyncio.InvalidStateError(f"No future created : {asyncio.Queue}")
+            asyncio.set_event_loop(self.__loop)
+            self.result = None
+        except RuntimeError:  # multithread / multiprocess context
+            self.result = asyncio.run(func(*args))
+        self.end = time.perf_counter()
 
     def add_done_callback(self, callback):
         if callback\
@@ -98,19 +91,14 @@ class AsyncRequest:
                 and self.future:
             self.future.add_done_callback(callback)
 
-    def _set_result(self, callback):
-        if isinstance(callback, Exception):
-            self.log.debug(f"Exceptions raised as callback @{time.perf_counter() - self.start}\n{callback:0.4f}s")
-            self.result = None
-            raise callback
+    def _set_result(self, cb):
+        if isinstance(cb, Exception):
+            self.log.debug(f"Exceptions raised as callback @{time.perf_counter() - self.start}\n{cb}s")
+            raise cb
         else:
-            self.log.debug(f"callback {callback} received @{time.perf_counter() - self.start:0.4f}s")
-            try:
-                self.result = callback.result()[0]
-            except TypeError:  # <_GatheringFuture ... result = None>
-                self.result = None
-                raise
-        self.future = None
+            self.log.debug(f"callback for {self.name} : {cb} received @{time.perf_counter() - self.start:0.4f}s")
+            self.result = cb.result()[0] if isinstance(cb.result(), list) else cb.result()
+        return self.result
 
     def get(self):
         """
@@ -119,22 +107,31 @@ class AsyncRequest:
         when done, stop current loop after ensuring _Future
         Release newly created loop (if not main thread's loop)
         """
-        if self.future and not self.future.done() or not self.result:
-            if not self.__loop.is_running() and self.future:
-                self.future.remove_done_callback(self._set_result)
-                self.result = self.__loop.run_until_complete(self.future)[0]  # [0] due to asyncio.gather return format
-            elif self.future:
-                self.future.__await__()
-            self.future = None
+        if self.future and not self.future.done():
+            self.__loop = self.future.get_loop()
+            if not self.future.get_loop().is_running():
+                self.__loop.run_until_complete(self.future)
+            if not self.result:
+                self.result = self.future.result()
+                self.future = None
+        return self.result
 
-        if self.__purge_when_done:
-            self.__loop.close()
-            self.__purge_when_done = False
-
-        return self.result  # wait for request to end then return response
+    def close(self, cb=None):
+        # self.__await__()
+        if isinstance(cb, Exception):
+            return
+        if self.__loop.is_running():
+            self.log.debug(f"stopping loop {self.__loop}")
+            self.__loop.stop()
+        self.log.debug(f"closing loop {self.__loop}")
+        self.__loop.close()
 
     def __str__(self):
         return self.get()
+
+    def __await__(self):
+        if self.future:
+            self.future.__await__()
 
 
 # ____________________________________________________ #
@@ -144,6 +141,7 @@ class AsyncRequest:
 def test_json(n: int = 55):
     import re
     import time
+    from uuid import UUID
     print("-_" * 7 + " Async : " + "-_" * 7)
     s = time.time()
     prepares = [AsyncRequest(get_content, "https://httpbin.org/", "uuid") for _ in range(n)]
