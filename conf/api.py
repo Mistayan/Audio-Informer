@@ -2,7 +2,7 @@
 Created by: Mistayan
 Project: Audio-Informer
 """
-
+from logging import config
 from types import MappingProxyType
 from typing import Final
 import pydub
@@ -59,5 +59,8 @@ config.dictConfig(log_config)
 # ____________________________________________________ #
 VALID_EXTENSIONS: Final = tuple([".WAV", ".MP3", ".OGG", ".FLAC", ".MP4",
                                  ".AIFF", ".AAC", ".C3", ".SMF", ".TAK", ".DSL"])  # Files types mutagen can open
+MAX_WORKERS = os.cpu_count() // 2 - 1  # Over-load prevention
+if MAX_WORKERS < 2:
+    MAX_WORKERS = 2
 REC_LIMIT = 5  # Applies for folders discovery
 MAX_HISTORY = 6  # Applies for musics search history and results
