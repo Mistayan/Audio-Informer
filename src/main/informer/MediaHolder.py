@@ -6,8 +6,6 @@ import logging
 import multiprocessing
 import os
 import re
-import time
-
 import mutagen
 
 from conf import api as conf
@@ -26,7 +24,6 @@ class MediaHolder:
     How to use:
     if MediaHolder.is_valid(file):
         media = MediaHolder(file)
-        print(media.get_lyrics())
         print(media.get_shazam())
         print(media.get_mutagen())
         print(media.get_musicbrainz())
@@ -75,6 +72,7 @@ class MediaHolder:
     # ---------------------------------- Outer methods ---------------------------------- #
     # -------------------------- methods that should be used  --------------------------- #
     def get_mutagen(self) -> mutagen.FileType | None:
+        """ uses mutagen to gather datas from file"""
         if not self.intel:
             try:
                 self.intel = mutagen.File(self.path, easy=True)
@@ -87,19 +85,24 @@ class MediaHolder:
         return self.intel
 
     def get_shazam(self) -> dict | None:
+        """ uses shazam_api to collect datas"""
         if isinstance(self.shazam, AsyncRequest):
             self.shazam = self.shazam.get()
         return self.shazam
 
     def get_musicbrainz(self):
+        """ uses musicbrainz_api to collect datas"""
         if not self.musicbrainz and self.get_shazam() or self.get_mutagen():
             self.musicbrainz = musicbrainz_api(self.get_shazam() or self.get_mutagen())
         return self.musicbrainz
 
-    # def get_lyrics(self):  # now included in shazam
-    #     if not self.lyrics:
-    #         self.lyrics = get_lyrics(self.get_shazam()['lyrics_url']) if self.shazam else None
-    #     return self.lyrics
+    def save(self):
+        """ WIP """
+        pass
+        # save_json(self.__repr__(), self.name)
+        # Compare datas
+        # save most valuable datas in intel
+        # self.update_tags()
 
     def update_tags(self):  # from https://programtalk.com/python-examples/mutagen.File/
         """Update ID3 tags in outfile"""

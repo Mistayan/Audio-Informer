@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 # ____________________________________________________ #
 # __________________ ASYNC FUNCTIONS _________________ #
 # ____________________________________________________ #
-async def get_content(url: str, query: str = ''):
+async def get_content(url: str, query: str = '') -> (dict | str | bytes | None):
     """
     Generate an async session requesting url + query
     Returns a StreamReader, according to current response formatting
@@ -43,7 +43,7 @@ async def get_content(url: str, query: str = ''):
                         case 'text/html':
                             ret: str = await response.text()
                         case _:
-                            ret = await response.content.read()
+                            ret: bytes = await response.content.read()
         if response.status == 200:
             log.debug(f"result for {target.human_repr()}: {ret if not isinstance(ret, bytes) else 'bytes.'}")
     except aiohttp.ClientConnectorError:
@@ -123,7 +123,7 @@ class AsyncRequest:
                 if not self.result:
                     self.result = self.future.result()
                     self.future = None
-        except:  # Either loop is done and closed or could not process requested datas.
+        except RuntimeError:  # Either loop is done and closed or could not process requested datas.
             pass
         return self.result
 
