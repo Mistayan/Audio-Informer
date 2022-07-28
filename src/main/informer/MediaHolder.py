@@ -32,8 +32,14 @@ class MediaHolder:
         print(media.get_musicbrainz())
         print(media.__repr__())  # will user all search methods at once and display gathered intel
     """
+    name = None
+    path = None
+    musicbrainz = None
+    repr = None
+    intel = None
+    shazam = None
 
-    def __init__(self, path: str, **kwargs):
+    def __init__(self, path: str, *args, **kwargs):
         if not self.is_valid(path):
             logger.error(f"{path} => not a valid file")
             return
@@ -48,27 +54,17 @@ class MediaHolder:
         if pp and not cp.is_alive():  # Multiprocessing support Start
             logger.debug(f"{cp.pid} Run")
             cp.run()
-        self.musicbrainz = None
-        self.repr = None
         self.shazam = AsyncRequest(shazam_it, self.path)
-        self.intel = None
         self.get_mutagen()
         # TODO: ensure MPEG 'TABL', 'TIT2', 'TPE1', TCON to be loaded as classic intel
         # TODO: ensure FLAC 'TITLE', 'ALBUMARTIST' > 'ARTIST', 'DATE', 'ALBUM', 'GENRE', 'TRACKNUMUBER', 'TOTALTRACKS'
 
         if not (self.intel or self.shazam):
             logger.warning(f"failed to open : {self.name} ")
-            del self
             return
         logger.info(f"Storing {self.name} as Media")
-        if 'multithread' in kwargs and kwargs.get('multithread') is True:   # Multithread support
-            if 'queue' in kwargs:
-                kwargs['queue'].put(self.__repr__())  # calculate everything and send back to shared memory.
-            else:
-                self.__repr__()
-        if pp and cp.is_alive():  # Multiprocessing support Stop
-            cp.close()
-            exit(0)
+        if pp and cp.is_alive():  # Multiprocessing support
+            self.__repr__()
 
     # ---------------------------------- Logic methods ---------------------------------- #
     @staticmethod
@@ -105,7 +101,7 @@ class MediaHolder:
     #         self.lyrics = get_lyrics(self.get_shazam()['lyrics_url']) if self.shazam else None
     #     return self.lyrics
 
-    def update_id3(self):  # from https://programtalk.com/python-examples/mutagen.File/
+    def update_tags(self):  # from https://programtalk.com/python-examples/mutagen.File/
         """Update ID3 tags in outfile"""
         # TODO: evaluate gathered intel to store in-file
         audio = mutagen.File(self.path, easy=True)
@@ -128,7 +124,7 @@ class MediaHolder:
 
     def __repr__(self) -> dict:
         if not self.repr:
-            self.shazam.__await__()
+            self.shazam.__await__() if self.shazam else None
             self.repr = {
                 "name": self.name,
                 "mutagen": self.intel,
