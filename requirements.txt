@@ -1,0 +1,9 @@
+aiohttp~=3.8.1
+parse~=1.19.0
+yarl==1.8.1
+Brotli~=1.0.9
+
+# Audio Requirements
+pydub~=0.25.1
+mutagen~=1.45.1
+shazamio~=0.2.0.0
