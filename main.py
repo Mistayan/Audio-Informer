@@ -83,7 +83,10 @@ if __name__ == '__main__':
     print(files)
     # medias = run_one_process(files)  # You can compare speed by un-commenting this line
     print(f"files found , loaded, and researches have started in {time.perf_counter() - s:0.5f} seconds.")
-    medias = run_multi_process(files)
+    if len(files) >= 3:
+        medias = run_multi_process(files)
+    else:
+        medias = run_one_process(files)
     # media: MediaHolder
     for media in medias:
         print(media.__repr__())

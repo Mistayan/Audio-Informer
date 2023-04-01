@@ -23,7 +23,7 @@ VERBOSITY_COUNT_TO_LEVEL: Final = MappingProxyType({
     3: "INFO",
     4: "DEBUG",
 })
-DEBUG: Final = VERBOSITY_COUNT_TO_LEVEL[2]  # Prod config
+DEBUG: Final = VERBOSITY_COUNT_TO_LEVEL[4]  # Prod config
 log_config: Final = {
     "version": 1,
     "root": {
@@ -38,7 +38,7 @@ log_config: Final = {
         }
     },
     'loggers': {
-        'myapp': {
+        'Audio-Informer': {
             'handlers': ['console'],
             'level': DEBUG,
             'propagate': True if DEBUG == "DEBUG" and PROPAGATE else False
